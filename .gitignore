@@ -1,0 +1,26 @@
+# Jupyter Notebooks & Checkpoints
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv/
+venv/
+env/
+
+# Stray scratch / draft notes
+select
+
+# Power BI / Office temporary & lock files
+~$*
+*~$*
+
+# OS metadata & caches
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store

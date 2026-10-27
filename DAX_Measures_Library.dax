@@ -1,0 +1,285 @@
+// ==============================================================================
+// DAX MEASURES LIBRARY: SUPPLY CHAIN INVENTORY OPTIMIZATION
+// ==============================================================================
+// Instructions:
+// In Power BI Desktop:
+// 1. In the Data pane, right-click on Fact_SupplyChain -> "New Measure".
+// 2. Paste each measure definition below.
+// 3. Set the suggested "Format" in the Measure tools ribbon at the top.
+// ==============================================================================
+
+// ------------------------------------------------------------------------------
+// SECTION 1: EXECUTIVE OVERVIEW & CORE KPIS (PAGE 1)
+// ------------------------------------------------------------------------------
+
+Total Inventory Units = 
+SUM(Fact_SupplyChain[Inventory_Level])
+// Format: Whole Number (#,##0)
+// Description: Sum of stock held across all monitored locations and SKUs.
+
+Total Units Sold = 
+SUM(Fact_SupplyChain[Units_Sold])
+// Format: Whole Number (#,##0)
+// Description: Cumulative quantity of product sold to customers in the observation period.
+
+Total Estimated Inventory Value = 
+SUM(Fact_SupplyChain[Inventory_Value])
+// Format: Currency ($#,##0)
+// Description: Aggregate capital tied up in stock calculated as Inventory_Level * Unit_Cost.
+
+Average Supplier Lead Time = 
+AVERAGE(Fact_SupplyChain[Supplier_Lead_Time_Days])
+// Format: Decimal Number (0.0 "days")
+// Description: Mean turnaround time from order placement to warehouse receipt across suppliers.
+
+Total Records = 
+COUNTROWS(Fact_SupplyChain)
+// Format: Whole Number (#,##0)
+// Description: Total daily SKU-warehouse observation rows.
+
+Distinct SKU Count = 
+DISTINCTCOUNT(Fact_SupplyChain[SKU_ID])
+// Format: Whole Number (#,##0)
+// Description: Count of unique catalog stock-keeping units.
+
+Distinct Warehouse Count = 
+DISTINCTCOUNT(Fact_SupplyChain[Warehouse_ID])
+// Format: Whole Number (#,##0)
+// Description: Count of active distribution warehouses (WH_1 through WH_5).
+
+Distinct Supplier Count = 
+DISTINCTCOUNT(Fact_SupplyChain[Supplier_ID])
+// Format: Whole Number (#,##0)
+// Description: Count of active vendor suppliers (SUP_1 through SUP_10).
+
+
+// ------------------------------------------------------------------------------
+// SECTION 2: REPLENISHMENT RISK & STOCKOUT DEFENSE (PAGE 2)
+// ------------------------------------------------------------------------------
+
+Records Below Reorder Point = 
+CALCULATE(
+    COUNTROWS(Fact_SupplyChain),
+    Fact_SupplyChain[Replenishment_Risk] = "Below Reorder Point"
+)
+// Format: Whole Number (#,##0)
+// Description: Daily observations where stock has breached the safety buffer (Critical Risk).
+
+Records At Reorder Point = 
+CALCULATE(
+    COUNTROWS(Fact_SupplyChain),
+    Fact_SupplyChain[Replenishment_Risk] = "At Reorder Point"
+)
+// Format: Whole Number (#,##0)
+// Description: Observations where stock exactly matches the reorder threshold (Buffer Attention).
+
+Records Above Reorder Point = 
+CALCULATE(
+    COUNTROWS(Fact_SupplyChain),
+    Fact_SupplyChain[Replenishment_Risk] = "Above Reorder Point"
+)
+// Format: Whole Number (#,##0)
+// Description: Observations with sufficient inventory exceeding the reorder threshold (Healthy).
+
+SKUs Below or At Reorder Point = 
+CALCULATE(
+    DISTINCTCOUNT(Fact_SupplyChain[SKU_ID]),
+    Fact_SupplyChain[Replenishment_Risk] IN {"Below Reorder Point", "At Reorder Point"}
+)
+// Format: Whole Number (#,##0)
+// Description: Count of distinct SKUs currently experiencing replenishment pressure.
+
+Replenishment Risk Percentage = 
+DIVIDE(
+    [Records Below Reorder Point],
+    [Total Records],
+    0
+)
+// Format: Percentage (0.00%)
+// Description: Proportion of operational days operating below safety reorder threshold.
+
+Total Reorder Point Units = 
+SUM(Fact_SupplyChain[Reorder_Point])
+// Format: Whole Number (#,##0)
+// Description: Aggregate baseline safety stock threshold requirement.
+
+Reorder Gap Sum = 
+SUM(Fact_SupplyChain[Reorder_Gap])
+// Format: Whole Number (#,##0)
+// Description: Net surplus/deficit between current stock and reorder point (Inventory - Reorder).
+
+Average Reorder Gap = 
+AVERAGE(Fact_SupplyChain[Reorder_Gap])
+// Format: Decimal Number (0.0)
+// Description: Average buffer margin per observation. Positive indicates healthy net buffer.
+
+Inventory to Reorder Ratio = 
+DIVIDE(
+    [Total Inventory Units],
+    [Total Reorder Point Units],
+    0
+)
+// Format: Decimal Number (0.00x)
+// Description: Health multiplier. 1.0 = exact threshold; > 1.0 = safe operational buffer.
+
+
+// ------------------------------------------------------------------------------
+// SECTION 3: DEMAND & FORECAST ACCURACY (PAGE 3)
+// ------------------------------------------------------------------------------
+
+Total Demand Forecast = 
+SUM(Fact_SupplyChain[Demand_Forecast])
+// Format: Decimal Number (#,##0.0)
+// Description: Total predicted customer demand generated by predictive forecasting models.
+
+Total Forecast Error = 
+SUM(Fact_SupplyChain[Forecast_Error])
+// Format: Decimal Number (#,##0.0)
+// Description: Net forecast variance (Units_Sold - Demand_Forecast).
+
+Mean Absolute Error (MAE) = 
+AVERAGE(Fact_SupplyChain[Absolute_Forecast_Error])
+// Format: Decimal Number (0.00)
+// Description: Average magnitude of forecast error per record regardless of direction.
+
+Forecast Bias = 
+AVERAGE(Fact_SupplyChain[Forecast_Error])
+// Format: Decimal Number (0.000)
+// Description: Directional tendency. Positive = underforecasting (sales > forecast); Negative = overforecasting.
+
+Forecast Accuracy Percentage = 
+DIVIDE(
+    1 - DIVIDE([Mean Absolute Error (MAE)], AVERAGE(Fact_SupplyChain[Units_Sold]), 0),
+    1,
+    0
+)
+// Format: Percentage (0.0%)
+// Description: Model accuracy normalized against average unit sales volume.
+
+Average Units Sold = 
+AVERAGE(Fact_SupplyChain[Units_Sold])
+// Format: Decimal Number (0.0)
+// Description: Mean daily unit sales per SKU-warehouse record.
+
+Average Demand Forecast = 
+AVERAGE(Fact_SupplyChain[Demand_Forecast])
+// Format: Decimal Number (0.0)
+// Description: Mean daily predicted units per SKU-warehouse record.
+
+Promo Units Sold = 
+CALCULATE(
+    SUM(Fact_SupplyChain[Units_Sold]),
+    Fact_SupplyChain[Promotion_Flag] = 1
+)
+// Format: Whole Number (#,##0)
+// Description: Total units sold on active promotional days.
+
+Non Promo Units Sold = 
+CALCULATE(
+    SUM(Fact_SupplyChain[Units_Sold]),
+    Fact_SupplyChain[Promotion_Flag] = 0
+)
+// Format: Whole Number (#,##0)
+// Description: Total units sold on standard baseline non-promotional days.
+
+Promo Sales Uplift % = 
+VAR PromoAvg = CALCULATE(AVERAGE(Fact_SupplyChain[Units_Sold]), Fact_SupplyChain[Promotion_Flag] = 1)
+VAR NonPromoAvg = CALCULATE(AVERAGE(Fact_SupplyChain[Units_Sold]), Fact_SupplyChain[Promotion_Flag] = 0)
+RETURN
+DIVIDE(PromoAvg - NonPromoAvg, NonPromoAvg, 0)
+// Format: Percentage (0.0%)
+// Description: Percentage sales velocity lift observed during active promotional campaigns.
+
+
+// ------------------------------------------------------------------------------
+// SECTION 4: SUPPLIER & WAREHOUSE BENCHMARKING (PAGE 4)
+// ------------------------------------------------------------------------------
+
+Supplier Lead Time StdDev = 
+STDEV.P(Fact_SupplyChain[Supplier_Lead_Time_Days])
+// Format: Decimal Number (0.00)
+// Description: Variability in delivery lead times indicating vendor reliability risk.
+
+Lead Time Risk Index = 
+DIVIDE([Average Supplier Lead Time], 14, 0)
+// Format: Percentage (0.0%)
+// Description: Normalized index benchmarking current lead times against 14-day max observed ceiling.
+
+Supplier Risk Concentration = 
+DIVIDE(
+    CALCULATE([Records Below Reorder Point]),
+    CALCULATE([Records Below Reorder Point], ALL(Fact_SupplyChain[Supplier_ID])),
+    0
+)
+// Format: Percentage (0.0%)
+// Description: Proportion of enterprise-wide below-reorder events attributable to a single vendor.
+
+Warehouse Stock Share % = 
+DIVIDE(
+    [Total Inventory Units],
+    CALCULATE([Total Inventory Units], ALL(Fact_SupplyChain[Warehouse_ID])),
+    0
+)
+// Format: Percentage (0.0%)
+// Description: Share of enterprise inventory physically held within the selected warehouse.
+
+
+// ------------------------------------------------------------------------------
+// SECTION 5: FINANCIAL VALUATION & CAPITAL (PAGE 5)
+// ------------------------------------------------------------------------------
+
+Average Unit Cost = 
+AVERAGE(Fact_SupplyChain[Unit_Cost])
+// Format: Currency ($#,##0.00)
+// Description: Mean manufacturing procurement cost per unit.
+
+Average Unit Price = 
+AVERAGE(Fact_SupplyChain[Unit_Price])
+// Format: Currency ($#,##0.00)
+// Description: Mean selling price per unit.
+
+Estimated Gross Revenue = 
+SUMX(Fact_SupplyChain, Fact_SupplyChain[Units_Sold] * Fact_SupplyChain[Unit_Price])
+// Format: Currency ($#,##0)
+// Description: Estimated revenue generated from actual customer unit sales.
+
+Estimated Cost of Goods Sold = 
+SUMX(Fact_SupplyChain, Fact_SupplyChain[Units_Sold] * Fact_SupplyChain[Unit_Cost])
+// Format: Currency ($#,##0)
+// Description: Procurement cost of inventory units sold.
+
+Estimated Gross Margin % = 
+DIVIDE(
+    [Estimated Gross Revenue] - [Estimated Cost of Goods Sold],
+    [Estimated Gross Revenue],
+    0
+)
+// Format: Percentage (0.0%)
+// Description: Gross operational margin on realized sales volume.
+
+Inventory Capital Concentration % = 
+DIVIDE(
+    [Total Estimated Inventory Value],
+    CALCULATE([Total Estimated Inventory Value], ALL(Fact_SupplyChain[SKU_ID])),
+    0
+)
+// Format: Percentage (0.0%)
+// Description: Percentage of total enterprise inventory valuation tied up in a specific SKU.
+
+
+// ------------------------------------------------------------------------------
+// SECTION 6: DYNAMIC EXECUTIVE NARRATIVE INSIGHTS (REPORT HEADERS)
+// ------------------------------------------------------------------------------
+
+Dynamic Executive Insight = 
+VAR RiskPct = [Replenishment Risk Percentage]
+VAR BelowCount = [Records Below Reorder Point]
+VAR TopWH = TOPN(1, VALUES(Fact_SupplyChain[Warehouse_ID]), [Records Below Reorder Point], DESC)
+VAR RiskStatus = 
+    IF(RiskPct > 0.08, "HIGH ALERT: Severe replenishment pressure detected.",
+    IF(RiskPct > 0.04, "MODERATE WATCH: 5.24% of records operate below reorder point.",
+    "STABLE: Inventory buffers remain above safety thresholds."))
+RETURN
+"System Status: " & RiskStatus & " (Total Below Reorder Records: " & FORMAT(BelowCount, "#,##0") & " across " & FORMAT([Distinct SKU Count], "#,##0") & " SKUs)."
+// Format: Text
+// Description: Dynamic executive narrative banner for Page 1 and Page 2.

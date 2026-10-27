@@ -1,0 +1,15 @@
+{
+  "version": "0.1",
+  "connections": [
+    {
+      "details": {
+        "protocol": "file",
+        "address": {
+          "path": "c:\\Users\\mmk29\\Downloads\\DV\\supply_chain_cleaned.csv"
+        }
+      },
+      "options": {},
+      "mode": "Import"
+    }
+  ]
+}
