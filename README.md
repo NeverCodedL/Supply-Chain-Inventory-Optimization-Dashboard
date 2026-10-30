@@ -85,8 +85,3 @@ Welcome to the complete, enterprise-grade Power BI dashboard solution for:
 
 ---
 
-### Teacher Presentation & Rubric Defense
-Refer to **`TEACHER_PRESENTATION_GUIDE.md`** for:
-* Word-for-word opening script.
-* Academic defense of why each visualization type was chosen over simple bar charts.
-* Explanation of data quirks: why `Stockout_Flag = 0` led to engineering the `Replenishment Risk Indicator`, and why `Order_Quantity = 0` in 94.49% of records reflects periodic batch ordering.
